@@ -6,6 +6,7 @@ import "io/ioutil"
 
 func TestHtml2pdf(t *testing.T) {
 	newObj := New()
+	defer newObj.Destroy()
 
 	newObj.SetData("Testing html to pdf go bindings")
 	newObj.SetOutputFileName("test.pdf")
@@ -33,5 +34,4 @@ func TestHtml2pdf(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	newObj.Destroy()
 }

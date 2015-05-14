@@ -59,20 +59,11 @@ func set_warning(converter *C.wkhtmltopdf_converter, msg *C.char) {
 	}
 }
 
-func setProgressChangedCallback(h2p *Html2pdf) {
+func (h2p *Html2pdf) initCallback() {
 	C.wkhtmltopdf_set_progress_changed_callback(h2p.converter, C.wkhtmltopdf_int_callback(unsafe.Pointer(C.progress_changed_cgo)))
-}
-
-func setPhaseChangedCallback(h2p *Html2pdf) {
 	C.wkhtmltopdf_set_phase_changed_callback(h2p.converter, C.wkhtmltopdf_void_callback(unsafe.Pointer(C.phase_changed_cgo)))
-}
-
-func setErrorCallback(h2p *Html2pdf) {
 	C.wkhtmltopdf_set_error_callback(h2p.converter, C.wkhtmltopdf_str_callback(unsafe.Pointer(C.set_error_cgo)))
-}
-
-func setWarningCallback(h2p *Html2pdf) {
-	C.wkhtmltopdf_set_error_callback(h2p.converter, C.wkhtmltopdf_str_callback(unsafe.Pointer(C.set_warning_cgo)))
+	C.wkhtmltopdf_set_warning_callback(h2p.converter, C.wkhtmltopdf_str_callback(unsafe.Pointer(C.set_warning_cgo)))
 }
 
 func (h2p *Html2pdf) OnProgressChanged(callback intFuncCallback) {
@@ -92,19 +83,9 @@ func (h2p *Html2pdf) OnWarning(callback stringFuncCallback) {
 }
 
 func New() *Html2pdf {
-	C.wkhtmltopdf_init(1)
 	gs := C.wkhtmltopdf_create_global_settings()
 	os := C.wkhtmltopdf_create_object_settings()
 	return &Html2pdf{gs: gs, os: os}
-}
-
-func createConverter(h2p *Html2pdf) {
-	converter := C.wkhtmltopdf_create_converter(h2p.gs)
-	h2p.converter = converter
-	setProgressChangedCallback(h2p)
-	setPhaseChangedCallback(h2p)
-	setErrorCallback(h2p)
-	setWarningCallback(h2p)
 }
 
 func (h2p *Html2pdf) SetGlobalSettings(global_settings [][2]string) {
@@ -136,7 +117,9 @@ func (h2p *Html2pdf) SetData(data string) {
 }
 
 func (h2p *Html2pdf) CreatePDF() (error, []byte) {
-	createConverter(h2p)
+	converter := C.wkhtmltopdf_create_converter(h2p.gs)
+	h2p.converter = converter
+	h2p.initCallback()
 
 	if inputData == "" {
 		C.wkhtmltopdf_add_object(h2p.converter, h2p.os, nil)
@@ -159,6 +142,10 @@ func (h2p *Html2pdf) CreatePDF() (error, []byte) {
 	outData := C.GoBytes(unsafe.Pointer(ptr), C.int(length))
 	C.wkhtmltopdf_destroy_converter(h2p.converter)
 	return nil, outData
+}
+
+func init() {
+	C.wkhtmltopdf_init(1)
 }
 
 func (h2p *Html2pdf) Destroy() {
